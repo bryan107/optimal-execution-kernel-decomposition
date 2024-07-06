@@ -11,9 +11,13 @@ class MLP(nn.Module):
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, decomp_dim)
 
-        self._log_sigma = nn.Parameter(data=torch.FloatTensor([0.1*torch.rand(1)]))
+        self._log_sigma_base = torch.log(torch.FloatTensor([1]))
+        # self._log_sigma = self._log_sigma_base
+        self._log_sigma = nn.Parameter(data=self._log_sigma_base+torch.log(torch.rand(1)))
 
-        self.price_impact_kappa = nn.Parameter(data=torch.FloatTensor([0.1*torch.rand(1)]))
+        self.price_impact_kappa_base = torch.FloatTensor([1])
+        # self.price_impact_kappa = self.price_impact_kappa_base
+        self.price_impact_kappa = nn.Parameter(data=self.price_impact_kappa_base*torch.rand(1))
 
     def forward(self, x):
 
@@ -25,7 +29,7 @@ class MLP(nn.Module):
 
     @property
     def sigma(self):
-        return torch.exp(self._log_sigma)**0.5
+        return torch.exp(self._log_sigma)
     
     @property
     def kappa(self):
@@ -42,8 +46,8 @@ class MultiTaskLoss(nn.Module):
     
     def forward(self, loss):
 
-        vars = torch.exp(self._log_params)**0.5
+        stds = torch.exp(self._log_params)
 
-        total_loss = vars @ loss + (1/vars).sum()
+        total_loss = (1/(1 + stds)) * loss + torch.log(stds)
 
-        return total_loss
+        return total_loss.mean()
