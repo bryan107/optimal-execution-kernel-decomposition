@@ -4,5 +4,5 @@ final_time: 1
 initial_price: 1
 decomp_dim: 10
 num_episodes: 50
-batch_size: 32
+batch_size: 64
 learning_rate: 0.001

@@ -13,8 +13,12 @@ def non_markovian_midprice(inital_prices,
     final_time = num_timesteps*dt
 
     permenant_price_impact_vals = permenant_price_impact_func(nu_vals)
-    kernel_vals = np.array([kernel_function(final_time, timestep*dt) for timestep in range(num_timesteps)])
-    kernel_integrand = kernel_vals.reshape(-1,1) * permenant_price_impact_vals * dt
+
+    # This gives K(s, t) for s<=t to integrate over
+    kernel_vals = np.array([kernel_function(timestep*dt, final_time) for timestep in range(num_timesteps)])
+    kernel_integrand = kernel_vals.reshape(-1, 1) * permenant_price_impact_vals * dt
+
+    # We do a vstack as the axis=1 are the batches
     kernel_integrand = np.vstack([inital_prices, kernel_integrand])
     kernel_integral = np.cumsum(kernel_integrand, axis=0)
 
