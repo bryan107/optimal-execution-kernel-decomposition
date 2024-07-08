@@ -1,8 +1,8 @@
-num_paths: 256
+num_paths: 10000
 num_timesteps: 1000
 final_time: 1
 initial_price: 1
 decomp_dim: 10
 num_episodes: 50
-batch_size: 64
-learning_rate: 0.001
+batch_size: 256
+learning_rate: 0.0001
