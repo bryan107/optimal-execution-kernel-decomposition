@@ -21,6 +21,8 @@ class MLP(nn.Module):
         self.price_impact_kappa = self.price_impact_kappa_base
         # self.price_impact_kappa = nn.Parameter(data=self.price_impact_kappa_base*torch.rand(1))
 
+        return None
+
     def forward(self, x):
 
         x_one= F.relu(self.fc1(x))
