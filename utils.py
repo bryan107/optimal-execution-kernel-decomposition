@@ -16,7 +16,7 @@ def non_markovian_midprice(inital_prices,
     brownian_motion_integrand = np.vstack([zeros, brownian_motion_integrand])
     brownian_motion_integral = np.cumsum(brownian_motion_integrand, axis=0)
 
-    prices = [inital_prices]
+    prices = []
     for super_timestep in range(0, num_timesteps):
         final_time = super_timestep*dt
 
