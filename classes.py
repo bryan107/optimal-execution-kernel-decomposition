@@ -6,27 +6,32 @@ import numpy as np
 
 class MLP(nn.Module):
 
-    def __init__(self, decomp_dim: int, learn_price_impact: bool = False):
+    def __init__(self, decomp_dim: int, 
+                 learn_price_impact: bool = False,
+                 sigma_start: int = 1,
+                 kappa_start: int = 1):
         super(MLP, self).__init__()
 
         self.learn_price_impact = learn_price_impact
 
         self.fc1 = nn.Linear(1, 64)
         self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, decomp_dim)
+        self.fc3 = nn.Linear(64, 64)
+        self.fc4 = nn.Linear(64, decomp_dim)
 
         if learn_price_impact:
             self.fcp1 = nn.Linear(1, 64)
             self.fcp2 = nn.Linear(64, 64)
-            self.fcp3 = nn.Linear(64, 1)
-            self._log_sigma_base = torch.log(torch.FloatTensor([0.1])+0.01*torch.randn(1))
+            self.fcp3 = nn.Linear(64, 64)
+            self.fcp4 = nn.Linear(64, 1)
+            self._log_sigma_base = torch.log(torch.FloatTensor([sigma_start])+0.01*torch.randn(1))
             self._log_sigma = nn.Parameter(data=self._log_sigma_base)
         else:
-            self._log_sigma_base = torch.log(torch.FloatTensor([0.1]))
+            self._log_sigma_base = torch.log(torch.FloatTensor([sigma_start]))
             self._log_sigma = self._log_sigma_base
             # self._log_sigma = nn.Parameter(data=self._log_sigma_base+torch.log(torch.rand(1)))
 
-            self.price_impact_kappa_base = torch.FloatTensor([0.1])
+            self.price_impact_kappa_base = torch.FloatTensor([kappa_start])
             self.price_impact_kappa = self.price_impact_kappa_base
             # self.price_impact_kappa = nn.Parameter(data=self.price_impact_kappa_base*torch.rand(1))
 
@@ -34,11 +39,12 @@ class MLP(nn.Module):
 
     def forward(self, x):
 
-        x_one= F.relu(self.fc1(x))
-        x_two = F.relu(self.fc2(x_one)) 
-        x_three = self.fc3(x_two)
+        x_one = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x_one))
+        x = F.relu(self.fc3(x)) + x_one
+        x = self.fc4(x)
 
-        return x_three
+        return x
     
     def approx_func(self, s, t):
 
@@ -67,9 +73,10 @@ class MLP(nn.Module):
     def permenant_price_impact_func(self, nu):
 
         if self.learn_price_impact:
-            x = F.relu(self.fcp1(nu))
-            x = F.relu(self.fcp2(x))
-            return_val = self.fcp3(x)
+            x_one = F.relu(self.fcp1(nu))
+            x = F.relu(self.fcp2(x_one))
+            x = F.relu(self.fcp3(x)) + x_one
+            return_val = self.fcp4(x)
         else:
             return_val = self.kappa * nu
 
@@ -86,9 +93,10 @@ class MLP(nn.Module):
             nu = torch.FloatTensor(nu)
 
         if self.learn_price_impact:
-            x = F.relu(self.fcp1(nu))
-            x = F.relu(self.fcp2(x))
-            return_val = self.fcp3(x).detach().numpy()
+            x_one = F.relu(self.fcp1(nu))
+            x = F.relu(self.fcp2(x_one))
+            x = F.relu(self.fcp3(x)) + x_one
+            return_val = self.fcp4(x).detach().numpy()
         else:
             return_val = self.kappa.detach().item() * nu
 
