@@ -6,27 +6,36 @@ import numpy as np
 
 class MLP(nn.Module):
 
-    def __init__(self, decomp_dim: int):
+    def __init__(self, decomp_dim: int, learn_price_impact: bool = False):
         super(MLP, self).__init__()
+
+        self.learn_price_impact = learn_price_impact
 
         self.fc1 = nn.Linear(1, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, decomp_dim)
 
-        self._log_sigma_base = torch.log(torch.FloatTensor([0.1]))
-        self._log_sigma = self._log_sigma_base
-        # self._log_sigma = nn.Parameter(data=self._log_sigma_base+torch.log(torch.rand(1)))
+        if learn_price_impact:
+            self.fcp1 = nn.Linear(1, 64)
+            self.fcp2 = nn.Linear(64, 64)
+            self.fcp3 = nn.Linear(64, 1)
+            self._log_sigma_base = torch.log(torch.FloatTensor([0.1]))
+            self._log_sigma = nn.Parameter(data=self._log_sigma_base+torch.log(0.1*torch.randn(1)))
+        else:
+            self._log_sigma_base = torch.log(torch.FloatTensor([0.1]))
+            self._log_sigma = self._log_sigma_base
+            # self._log_sigma = nn.Parameter(data=self._log_sigma_base+torch.log(torch.rand(1)))
 
-        self.price_impact_kappa_base = torch.FloatTensor([0.01])
-        self.price_impact_kappa = self.price_impact_kappa_base
-        # self.price_impact_kappa = nn.Parameter(data=self.price_impact_kappa_base*torch.rand(1))
+            self.price_impact_kappa_base = torch.FloatTensor([0.1])
+            self.price_impact_kappa = self.price_impact_kappa_base
+            # self.price_impact_kappa = nn.Parameter(data=self.price_impact_kappa_base*torch.rand(1))
 
         return None
 
     def forward(self, x):
 
-        x_one= F.relu(self.fc1(x))
-        x_two = F.relu(self.fc2(x_one)) 
+        x_one= F.sigmoid(self.fc1(x))
+        x_two = F.sigmoid(self.fc2(x_one)) 
         x_three = self.fc3(x_two)
 
         return x_three
@@ -57,11 +66,35 @@ class MLP(nn.Module):
     
     def permenant_price_impact_func(self, nu):
 
-        return self.kappa * nu
+        if self.learn_price_impact:
+
+            x = F.sigmoid(self.fcp1(nu))
+            x = F.sigmoid(self.fcp2(x))
+            return_val = self.fcp3(x)
+        else:
+            return_val = self.kappa * nu
+
+        return return_val
     
     def numpy_permenant_price_impact_func(self, nu):
 
-        return self.kappa.detach().item() * nu
+        if type(nu) == float:
+            nu = np.array([nu])
+            nu = torch.FloatTensor(nu)
+        if torch.is_tensor(nu):
+            pass
+        if isinstance(nu, np.ndarray):
+            nu = torch.FloatTensor(nu)
+
+        if self.learn_price_impact:
+            x = F.sigmoid(self.fcp1(nu))
+            x = F.sigmoid(self.fcp2(x))
+            return_val = self.fcp3(x).detach().numpy()
+        else:
+            return_val = self.kappa.detach().item() * nu
+
+        return return_val
+
 
     @property
     def sigma(self):
@@ -73,10 +106,14 @@ class MLP(nn.Module):
 
 class MultiTaskLoss(nn.Module):
 
-    def __init__(self, num_losses: int):
+    def __init__(self, num_losses: int, lagrangian:bool = False):
         super(MultiTaskLoss, self).__init__()
-
-        self._log_params = nn.Parameter(data=torch.ones(num_losses), requires_grad=True)
+        
+        self.lagrangian = lagrangian
+        if lagrangian:
+            self._log_params = nn.Parameter(data=torch.ones(num_losses-1)*0.01, requires_grad=True)
+        else:
+            self._log_params = nn.Parameter(data=torch.ones(num_losses), requires_grad=True)
 
         return None
     
@@ -84,6 +121,9 @@ class MultiTaskLoss(nn.Module):
 
         stds = torch.exp(self._log_params)**0.5
 
-        total_loss = (1/(1 + stds)) * loss + torch.log(stds)**2
+        if self.lagrangian:
+            total_loss = loss[0] + (stds.reshape(-1,1) * loss[1:].reshape(-1, 1)).sum()
+        else:
+            total_loss = (1/stds) * loss + (1/stds).sum()
 
         return total_loss.mean()
