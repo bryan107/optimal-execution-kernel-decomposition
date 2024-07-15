@@ -51,7 +51,7 @@ class MLP(nn.Module):
         s_val = self.forward(s)
         t_val = self.forward(t)
 
-        return torch.abs((s_val * t_val).sum(axis=1))
+        return (s_val * t_val).sum(axis=1)
     
     def numpy_approx_func(self, s, t):
         
@@ -68,7 +68,7 @@ class MLP(nn.Module):
         s_val = self.forward(s)
         t_val = self.forward(t)
 
-        return torch.abs((s_val * t_val).sum(axis=-1)).detach().numpy()
+        return (s_val * t_val).sum(axis=-1).detach().numpy()
     
     def permenant_price_impact_func(self, nu):
 
