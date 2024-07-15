@@ -19,8 +19,8 @@ class MLP(nn.Module):
             self.fcp1 = nn.Linear(1, 64)
             self.fcp2 = nn.Linear(64, 64)
             self.fcp3 = nn.Linear(64, 1)
-            self._log_sigma_base = torch.log(torch.FloatTensor([0.1]))
-            self._log_sigma = nn.Parameter(data=self._log_sigma_base+torch.log(0.1*torch.randn(1)))
+            self._log_sigma_base = torch.log(torch.FloatTensor([0.1])+0.01*torch.randn(1))
+            self._log_sigma = nn.Parameter(data=self._log_sigma_base)
         else:
             self._log_sigma_base = torch.log(torch.FloatTensor([0.1]))
             self._log_sigma = self._log_sigma_base
@@ -34,8 +34,8 @@ class MLP(nn.Module):
 
     def forward(self, x):
 
-        x_one= F.sigmoid(self.fc1(x))
-        x_two = F.sigmoid(self.fc2(x_one)) 
+        x_one= F.relu(self.fc1(x))
+        x_two = F.relu(self.fc2(x_one)) 
         x_three = self.fc3(x_two)
 
         return x_three
@@ -67,9 +67,8 @@ class MLP(nn.Module):
     def permenant_price_impact_func(self, nu):
 
         if self.learn_price_impact:
-
-            x = F.sigmoid(self.fcp1(nu))
-            x = F.sigmoid(self.fcp2(x))
+            x = F.relu(self.fcp1(nu))
+            x = F.relu(self.fcp2(x))
             return_val = self.fcp3(x)
         else:
             return_val = self.kappa * nu
@@ -87,8 +86,8 @@ class MLP(nn.Module):
             nu = torch.FloatTensor(nu)
 
         if self.learn_price_impact:
-            x = F.sigmoid(self.fcp1(nu))
-            x = F.sigmoid(self.fcp2(x))
+            x = F.relu(self.fcp1(nu))
+            x = F.relu(self.fcp2(x))
             return_val = self.fcp3(x).detach().numpy()
         else:
             return_val = self.kappa.detach().item() * nu
@@ -111,7 +110,7 @@ class MultiTaskLoss(nn.Module):
         
         self.lagrangian = lagrangian
         if lagrangian:
-            self._log_params = nn.Parameter(data=torch.ones(num_losses-1)*0.01, requires_grad=True)
+            self._log_params = nn.Parameter(data=torch.ones(num_losses-1), requires_grad=True)
         else:
             self._log_params = nn.Parameter(data=torch.ones(num_losses), requires_grad=True)
 
