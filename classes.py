@@ -42,6 +42,7 @@ class MLP(nn.Module):
         x_one = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x_one))
         x = F.relu(self.fc3(x)) + x_one
+        # x = F.softplus(self.fc4(x), beta=0.1)
         x = self.fc4(x)
 
         return x
@@ -77,6 +78,7 @@ class MLP(nn.Module):
             x = F.relu(self.fcp2(x_one))
             x = F.relu(self.fcp3(x)) + x_one
             return_val = self.fcp4(x)
+            # return_val = (torch.sign(nu).detach()*F.softplus(self.fcp4(x), beta=0.1))
         else:
             return_val = self.kappa * nu
 
@@ -97,6 +99,7 @@ class MLP(nn.Module):
             x = F.relu(self.fcp2(x_one))
             x = F.relu(self.fcp3(x)) + x_one
             return_val = self.fcp4(x).detach().numpy()
+            # return_val = (torch.sign(nu).detach()*F.softplus(self.fcp4(x), beta=0.1)).detach().numpy()
         else:
             return_val = self.kappa.detach().item() * nu
 
