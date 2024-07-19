@@ -133,6 +133,6 @@ class MultiTaskLoss(nn.Module):
         if self.lagrangian:
             total_loss = loss[0] + (stds.reshape(-1,1) * loss[1:].reshape(-1, 1)).sum()
         else:
-            total_loss = (1/stds) * loss + (1/stds).sum()
+            total_loss = (1/stds) * loss
 
         return total_loss.mean() + (1/stds).sum()
