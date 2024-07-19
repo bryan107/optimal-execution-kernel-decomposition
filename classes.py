@@ -42,7 +42,6 @@ class MLP(nn.Module):
         x_one = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x_one))
         x = F.relu(self.fc3(x)) + x_one
-        # x = F.softplus(self.fc4(x), beta=0.1)
         x = self.fc4(x)
 
         return x
@@ -136,4 +135,4 @@ class MultiTaskLoss(nn.Module):
         else:
             total_loss = (1/stds) * loss + (1/stds).sum()
 
-        return total_loss.mean()
+        return total_loss.mean() + (1/stds).sum()
