@@ -40,9 +40,9 @@ class MLP(nn.Module):
     def forward(self, x):
 
         x_one = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x_one))
-        x = F.relu(self.fc3(x)) + x_one
-        x = self.fc4(x)
+        x = F.relu(self.fc2(x_one)) 
+        x = F.relu(self.fc3(x)) + x_one 
+        x = self.fc4(x) 
 
         return x
     
