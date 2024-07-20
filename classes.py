@@ -4,9 +4,77 @@ from torch.functional import F
 
 import numpy as np
 
+class Kernel(nn.Module):
+    def __init__(self, 
+                 input_dim: int,
+                 decomp_dim: int, 
+                 ):
+        
+        super(Kernel, self).__init__()
+
+        self.fc1 = nn.Linear(input_dim, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, decomp_dim)
+
+        return None
+
+    def forward(self, x, parameters):
+
+        x = torch.hstack([x, parameters])
+
+        x_one = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x_one)) 
+        x = self.fc3(x) 
+
+        return x
+    
+    def approx_func(self, 
+                    s, 
+                    t,
+                    parameters):
+
+        s_val = self.forward(s, parameters)
+        t_val = self.forward(t, parameters)
+
+        return (s_val * t_val).sum(axis=1)
+    
+class ModelParameters(nn.Module):
+
+    def __init__(self, parameter_dim: int):
+        super().__init__()
+        self._params = nn.Parameter(torch.ones(parameter_dim), requires_grad=True)
+    
+    @property
+    def params(self):
+        return self._params
+    
+class PriceImpact(nn.Module):
+
+    def __init__(self,):
+
+        super(PriceImpact, self).__init__()
+
+        self.fc1 = nn.Linear(1, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, 1)
+
+        return None
+    
+    def forward(self, nu):
+
+        x_one = F.relu(self.fc1(nu))
+        x = F.relu(self.fc2(x_one))
+        return_val = self.fc3(x)
+
+        return return_val
+
+#####################################################################
+
+
 class MLP(nn.Module):
 
-    def __init__(self, decomp_dim: int, 
+    def __init__(self, 
+                 decomp_dim: int, 
                  learn_price_impact: bool = False,
                  sigma_start: int = 1,
                  kappa_start: int = 1):
@@ -16,14 +84,12 @@ class MLP(nn.Module):
 
         self.fc1 = nn.Linear(1, 64)
         self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, 64)
-        self.fc4 = nn.Linear(64, decomp_dim)
+        self.fc3 = nn.Linear(64, decomp_dim)
 
         if learn_price_impact:
             self.fcp1 = nn.Linear(1, 64)
             self.fcp2 = nn.Linear(64, 64)
-            self.fcp3 = nn.Linear(64, 64)
-            self.fcp4 = nn.Linear(64, 1)
+            self.fcp3 = nn.Linear(64, 1)
             self._log_sigma_base = torch.log(torch.FloatTensor([sigma_start])+0.01*torch.randn(1))
             self._log_sigma = nn.Parameter(data=self._log_sigma_base)
         else:
@@ -41,8 +107,7 @@ class MLP(nn.Module):
 
         x_one = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x_one)) 
-        x = F.relu(self.fc3(x)) + x_one 
-        x = self.fc4(x) 
+        x = self.fc3(x)
 
         return x
     
@@ -75,9 +140,7 @@ class MLP(nn.Module):
         if self.learn_price_impact:
             x_one = F.relu(self.fcp1(nu))
             x = F.relu(self.fcp2(x_one))
-            x = F.relu(self.fcp3(x)) + x_one
-            return_val = self.fcp4(x)
-            # return_val = (torch.sign(nu).detach()*F.softplus(self.fcp4(x), beta=0.1))
+            return_val = self.fcp3(x)
         else:
             return_val = self.kappa * nu
 
@@ -112,11 +175,16 @@ class MLP(nn.Module):
     @property
     def kappa(self):
         return self.price_impact_kappa
+    
+#####################################################################
+
 
 class MultiTaskLoss(nn.Module):
 
     def __init__(self, num_losses: int, lagrangian:bool = False):
         super(MultiTaskLoss, self).__init__()
+
+        self.num_losses = num_losses
         
         self.lagrangian = lagrangian
         if lagrangian:
@@ -131,8 +199,8 @@ class MultiTaskLoss(nn.Module):
         stds = torch.exp(self._log_params)**0.5
 
         if self.lagrangian:
-            total_loss = loss[0] + (stds.reshape(-1,1) * loss[1:].reshape(-1, 1)).sum()
+            total_loss = loss[0] + (stds.reshape(1,self.num_losses-1) * loss[1:].reshape(-1,self.num_losses-1))
         else:
             total_loss = (1/stds) * loss
 
-        return total_loss.mean() + (1/stds).sum()
+        return total_loss.mean() + ((1/stds)**2).sum()

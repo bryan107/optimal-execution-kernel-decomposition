@@ -1,4 +1,38 @@
 import numpy as np
+import torch
+
+def generate_time_one_time_two(rng,
+                                num_timesteps,
+                                batch_size,
+                                dt,
+                                one_direction: bool = False,
+                                end_sample_frac: int = 0):
+    
+    lower_bound = max((num_timesteps-1)*end_sample_frac, 0)
+    upper_bound = num_timesteps-1
+
+    if one_direction:
+        val_one = rng.uniform(lower_bound+1, upper_bound, batch_size)
+        val_two = np.array([rng.uniform(lower_bound, _) for _ in val_one])
+    else:
+        val_one = rng.uniform(-upper_bound*2, upper_bound*2, batch_size)
+        val_two = rng.uniform(-upper_bound*2, upper_bound*2, batch_size)
+
+    time_one = (
+                torch.FloatTensor(val_one).reshape(
+                    -1, 1
+                )
+                * dt
+            )
+    
+    time_two = (
+        torch.FloatTensor(val_two).reshape(
+            -1, 1
+        )
+        * dt
+    )
+
+    return time_one, time_two
 
 def non_markovian_midprice(inital_prices, 
                         permenant_price_impact_func, 
