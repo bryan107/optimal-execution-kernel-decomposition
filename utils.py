@@ -12,11 +12,11 @@ def generate_time_one_time_two(rng,
     upper_bound = num_timesteps-1
 
     if one_direction:
-        val_one = rng.uniform(lower_bound+1, upper_bound, batch_size)
-        val_two = np.array([rng.uniform(lower_bound, _) for _ in val_one])
+        val_one = rng.uniform(upper_bound-lower_bound, upper_bound+lower_bound, batch_size)
+        val_two = np.array([rng.uniform(upper_bound-lower_bound-1, _) for _ in val_one])
     else:
-        val_one = rng.uniform(-upper_bound*2, upper_bound*2, batch_size)
-        val_two = rng.uniform(-upper_bound*2, upper_bound*2, batch_size)
+        val_one = rng.uniform(lower_bound, upper_bound*2, batch_size)
+        val_two = rng.uniform(lower_bound, upper_bound*2, batch_size)
 
     time_one = (
                 torch.FloatTensor(val_one).reshape(

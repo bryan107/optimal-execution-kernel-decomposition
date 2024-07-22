@@ -14,17 +14,20 @@ class Kernel(nn.Module):
 
         self.fc1 = nn.Linear(input_dim, 64)
         self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, decomp_dim)
+        self.fc3 = nn.Linear(64, 64)
+        self.fc4 = nn.Linear(64, decomp_dim)
 
         return None
 
-    def forward(self, x, parameters):
+    def forward(self, x, parameters = None):
 
-        x = torch.hstack([x, parameters])
+        if not parameters is None:
+            x = torch.hstack([x, parameters])
 
         x_one = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x_one)) 
-        x = self.fc3(x) 
+        x = F.relu(self.fc3(x)) + x_one
+        x = self.fc4(x)
 
         return x
     
@@ -40,9 +43,14 @@ class Kernel(nn.Module):
     
 class ModelParameters(nn.Module):
 
-    def __init__(self, parameter_dim: int):
+    def __init__(self, parameter_dim: int, parameter_start):
         super().__init__()
-        self._params = nn.Parameter(torch.ones(parameter_dim), requires_grad=True)
+
+        start_params = torch.FloatTensor([parameter_start]).flatten()
+        start_params[0] = torch.log(start_params[0])
+
+        self._params = nn.Parameter(start_params, 
+                                    requires_grad=True)
     
     @property
     def params(self):
@@ -56,7 +64,8 @@ class PriceImpact(nn.Module):
 
         self.fc1 = nn.Linear(1, 64)
         self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, 1)
+        self.fc3 = nn.Linear(64, 64)
+        self.fc4 = nn.Linear(64, 1)
 
         return None
     
@@ -64,7 +73,8 @@ class PriceImpact(nn.Module):
 
         x_one = F.relu(self.fc1(nu))
         x = F.relu(self.fc2(x_one))
-        return_val = self.fc3(x)
+        x = F.relu(self.fc3(x)) + x_one
+        return_val = self.fc4(x)
 
         return return_val
 
@@ -82,16 +92,12 @@ class MLP(nn.Module):
 
         self.learn_price_impact = learn_price_impact
 
-        self.fc1 = nn.Linear(1, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, decomp_dim)
+        self.kernel_func = Kernel(input_dim=1, decomp_dim=1)
+
 
         if learn_price_impact:
-            self.fcp1 = nn.Linear(1, 64)
-            self.fcp2 = nn.Linear(64, 64)
-            self.fcp3 = nn.Linear(64, 1)
-            self._log_sigma_base = torch.log(torch.FloatTensor([sigma_start])+0.01*torch.randn(1))
-            self._log_sigma = nn.Parameter(data=self._log_sigma_base)
+            self.price_impact = PriceImpact()
+            self.model_parameters = ModelParameters(parameter_dim=1, parameter_start=sigma_start)
         else:
             self._log_sigma_base = torch.log(torch.FloatTensor([sigma_start]))
             self._log_sigma = self._log_sigma_base
@@ -105,9 +111,7 @@ class MLP(nn.Module):
 
     def forward(self, x):
 
-        x_one = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x_one)) 
-        x = self.fc3(x)
+        x = self.kernel_func(x)
 
         return x
     
@@ -138,13 +142,11 @@ class MLP(nn.Module):
     def permenant_price_impact_func(self, nu):
 
         if self.learn_price_impact:
-            x_one = F.relu(self.fcp1(nu))
-            x = F.relu(self.fcp2(x_one))
-            return_val = self.fcp3(x)
+            x = self.price_impact(nu)
         else:
-            return_val = self.kappa * nu
+            x = self.kappa * nu
 
-        return return_val
+        return x
     
     def numpy_permenant_price_impact_func(self, nu):
 
@@ -157,24 +159,20 @@ class MLP(nn.Module):
             nu = torch.FloatTensor(nu)
 
         if self.learn_price_impact:
-            x_one = F.relu(self.fcp1(nu))
-            x = F.relu(self.fcp2(x_one))
-            x = F.relu(self.fcp3(x)) + x_one
-            return_val = self.fcp4(x).detach().numpy()
+            x = self.price_impact(nu).detach().numpy()
             # return_val = (torch.sign(nu).detach()*F.softplus(self.fcp4(x), beta=0.1)).detach().numpy()
         else:
-            return_val = self.kappa.detach().item() * nu
+            x = self.kappa.detach().item() * nu
 
-        return return_val
-
+        return x
 
     @property
     def sigma(self):
-        return torch.exp(self._log_sigma)
+        return torch.exp(self.model_parameters.params[0])
     
     @property
     def kappa(self):
-        return self.price_impact_kappa
+        return self.model_parameters.params[1]
     
 #####################################################################
 
