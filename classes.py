@@ -191,7 +191,7 @@ class MLP(nn.Module):
     @property
     def params(self):
         return self.model_parameters.params[1:]
-    
+
 #####################################################################
 
 
