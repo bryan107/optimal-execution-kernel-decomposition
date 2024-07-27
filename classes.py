@@ -204,9 +204,9 @@ class MultiTaskLoss(nn.Module):
         
         self.lagrangian = lagrangian
         if lagrangian:
-            self._log_params = nn.Parameter(data=torch.ones(num_losses-1), requires_grad=True)
+            self._log_params = nn.Parameter(data=0.1*torch.ones(num_losses-1), requires_grad=True)
         else:
-            self._log_params = nn.Parameter(data=torch.ones(num_losses), requires_grad=True)
+            self._log_params = nn.Parameter(data=0.1*torch.ones(num_losses), requires_grad=True)
 
         return None
     
