@@ -34,7 +34,7 @@ class Kernel(nn.Module):
         x_one = F.relu(self.fc1(x)) 
         x_two = F.relu(self.fc2(x_one)) 
         x = F.relu(self.fc3(x_two)) + x_one
-        x = self.fc4(x)
+        x = self.fc4(x)**2
 
         return x
     
