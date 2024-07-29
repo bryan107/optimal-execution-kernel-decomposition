@@ -34,7 +34,7 @@ class Kernel(nn.Module):
         x_one = F.relu(self.fc1(x)) 
         x_two = F.relu(self.fc2(x_one)) 
         x = F.relu(self.fc3(x_two)) + x_one
-        x = self.fc4(x)**2
+        x = torch.abs(self.fc4(x))
 
         return x
     
@@ -65,10 +65,10 @@ class PriceImpact(nn.Module):
     
     def forward(self, nu):
 
-        x_one = F.relu(self.fc1(nu))
+        x_one = F.relu(self.fc1(torch.abs(nu)))
         x_two = F.relu(self.fc2(x_one))
         x = F.relu(self.fc3(x_two)) + x_one
-        return_val = self.fc4(x)
+        return_val = torch.sign(nu)*torch.abs(self.fc4(x))
 
         return return_val
     
