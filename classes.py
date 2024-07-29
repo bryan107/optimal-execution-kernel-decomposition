@@ -34,7 +34,7 @@ class Kernel(nn.Module):
         x_one = F.relu(self.fc1(x)) 
         x_two = F.relu(self.fc2(x_one)) 
         x = F.relu(self.fc3(x_two)) + x_one
-        x = torch.abs(self.fc4(x))
+        x = self.fc4(x)
 
         return x
     
@@ -54,10 +54,10 @@ class PriceImpact(nn.Module):
 
         super(PriceImpact, self).__init__()
 
-        self.fc1 = nn.Linear(1, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, 64)
-        self.fc4 = nn.Linear(64, 1)
+        self.fc1 = nn.Linear(1, 16)
+        self.fc2 = nn.Linear(16, 16)
+        self.fc3 = nn.Linear(16, 16)
+        self.fc4 = nn.Linear(16, 1)
 
         init_weights(self)
 
@@ -204,9 +204,9 @@ class MultiTaskLoss(nn.Module):
         
         self.lagrangian = lagrangian
         if lagrangian:
-            self._log_params = nn.Parameter(data=0.1*torch.ones(num_losses-1), requires_grad=True)
+            self._log_params = nn.Parameter(data=1*torch.ones(num_losses-1), requires_grad=True)
         else:
-            self._log_params = nn.Parameter(data=0.1*torch.ones(num_losses), requires_grad=True)
+            self._log_params = nn.Parameter(data=1*torch.ones(num_losses), requires_grad=True)
 
         return None
     
@@ -219,4 +219,4 @@ class MultiTaskLoss(nn.Module):
         else:
             total_loss = stds.reshape(1,self.num_losses) * loss.reshape(-1,self.num_losses) 
 
-        return total_loss.mean() + (1/stds**2).sum()
+        return total_loss.mean() + (1/stds).sum()
