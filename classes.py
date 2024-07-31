@@ -17,10 +17,10 @@ class Kernel(nn.Module):
         
         super(Kernel, self).__init__()
 
-        self.fc1 = nn.Linear(input_dim, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, 64)
-        self.fc4 = nn.Linear(64, decomp_dim)
+        self.fc1 = nn.Linear(input_dim, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, 128)
+        self.fc4 = nn.Linear(128, decomp_dim)
 
         init_weights(self)
 
@@ -31,7 +31,7 @@ class Kernel(nn.Module):
         if not parameters is None:
             x = torch.hstack([x, parameters])
 
-        x_one = F.relu(self.fc1(x)) 
+        x_one = F.relu(self.fc1(x))
         x_two = F.relu(self.fc2(x_one)) 
         x = F.relu(self.fc3(x_two)) + x_one
         x = self.fc4(x)
@@ -54,10 +54,10 @@ class PriceImpact(nn.Module):
 
         super(PriceImpact, self).__init__()
 
-        self.fc1 = nn.Linear(1, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, 64)
-        self.fc4 = nn.Linear(64, 1)
+        self.fc1 = nn.Linear(1, 16)
+        self.fc2 = nn.Linear(16, 16)
+        self.fc3 = nn.Linear(16, 16)
+        self.fc4 = nn.Linear(16, 1)
 
         init_weights(self)
 
@@ -175,6 +175,8 @@ class MLP(nn.Module):
         if torch.is_tensor(nu):
             pass
         if isinstance(nu, np.ndarray):
+            if nu.shape[0] == 0:
+                return 0
             nu = torch.FloatTensor(nu)
 
         if self.learn_price_impact:
